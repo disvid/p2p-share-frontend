@@ -78,7 +78,7 @@ export default function Home() {
             <div className="w-8 h-8 rounded-lg bg-gradient-brand shadow-glow animate-float flex items-center justify-center text-white font-bold text-sm">
               D
             </div>
-            <span className="font-bold text-lg text-gradient">Drop</span>
+            <span className="font-bold text-lg text-gradient">DataBeam</span>
           </div>
           <div className="flex items-center gap-2 text-xs font-medium text-zinc-600">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />

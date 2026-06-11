@@ -95,7 +95,7 @@ export default function Room() {
             <div className="w-8 h-8 rounded-lg bg-gradient-brand shadow-glow flex items-center justify-center text-white font-bold text-sm group-hover:scale-110 transition-transform">
               D
             </div>
-            <span className="font-bold text-lg text-gradient">Drop</span>
+            <span className="font-bold text-lg text-gradient">DataBeam</span>
           </Link>
           <StatusBadge status={status} />
         </div>
