@@ -85,91 +85,96 @@ export default function Room() {
   const showProgress = (isTransfer || isDone) && progress.total > 0;
 
   const roleLabel = !role ? 'Joining' : role === 'sender' ? 'Sending' : 'Receiving';
+  const roleColor = !role ? 'text-zinc-500' : role === 'sender' ? 'text-accent-600' : 'text-brand-pink';
 
   return (
-    <div className="min-h-screen bg-[#fafafa] flex flex-col">
-      <header className="px-6 py-5 border-b border-zinc-200">
-        <div className="mx-auto max-w-2xl flex items-center justify-between">
-          <Link to="/" className="text-base font-semibold tracking-tight text-zinc-900">
-            Drop
+    <div className="min-h-screen flex flex-col">
+      <nav className="border-b border-zinc-200/60 backdrop-blur-md bg-white/50 sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2 group">
+            <div className="w-8 h-8 rounded-lg bg-gradient-brand shadow-glow flex items-center justify-center text-white font-bold text-sm group-hover:scale-110 transition-transform">
+              D
+            </div>
+            <span className="font-bold text-lg text-gradient">Drop</span>
           </Link>
           <StatusBadge status={status} />
         </div>
-      </header>
+      </nav>
 
-      <main className="flex-1 flex flex-col items-center px-6 py-16">
-        <div className="w-full max-w-md space-y-4">
-
+      <main className="flex-1 flex items-center justify-center px-6 py-12">
+        <div className="w-full max-w-2xl space-y-5 animate-fade-in-up">
           {/* File card */}
-          <div className="rounded-lg border border-zinc-200 bg-white p-4 space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs text-zinc-400 mb-1">{roleLabel}</p>
+          <div className="glass rounded-2xl p-6 shadow-soft space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <p className={`text-xs font-bold uppercase tracking-wider ${roleColor} mb-1.5`}>
+                  {roleLabel}
+                </p>
                 {senderMeta || fileResult ? (
                   <>
-                    <p className="text-sm font-medium text-zinc-900 truncate">
+                    <p className="text-base font-semibold text-zinc-900 truncate">
                       {fileResult?.filename || senderMeta?.name}
                     </p>
-                    <p className="text-xs text-zinc-400 mt-0.5">
+                    <p className="text-xs text-zinc-500 mono mt-0.5">
                       {formatBytes(fileResult?.blob?.size ?? senderMeta?.size ?? 0)}
                     </p>
                   </>
                 ) : (
-                  <p className="text-sm text-zinc-400">Waiting for file information…</p>
+                  <p className="text-sm text-zinc-500 italic">Waiting for file information…</p>
                 )}
               </div>
               {resolvedKey && (
-                <span className="shrink-0 text-xs text-zinc-400 mt-0.5">Encrypted</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-accent-100 to-purple-100 text-accent-700 text-[10px] font-bold uppercase tracking-wide border border-accent-200">
+                  🔒 Encrypted
+                </span>
               )}
             </div>
 
             {!isSender && (
-              <div className="flex items-center gap-2 pt-1 border-t border-zinc-100">
-                <code className="flex-1 mono text-xs text-zinc-500 truncate">{roomLink}</code>
+              <div className="flex gap-2 pt-3 border-t border-zinc-200/60">
+                <div className="flex-1 px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-200 mono text-[11px] text-zinc-600 truncate">
+                  {roomLink}
+                </div>
                 <button
                   onClick={handleCopy}
-                  className="shrink-0 text-xs font-medium px-2.5 py-1.5 rounded-md border border-zinc-200 hover:bg-zinc-50 transition-colors text-zinc-600"
+                  className={`px-3 py-2 rounded-lg font-medium text-xs btn-press transition-all ${
+                    copied ? 'bg-emerald-500 text-white' : 'bg-zinc-900 text-white hover:bg-zinc-700'
+                  }`}
                 >
-                  {copied ? 'Copied' : 'Copy'}
+                  {copied ? '✓' : 'Copy'}
                 </button>
               </div>
             )}
           </div>
 
           {/* Status messages */}
-          {!keyReady && <StatusLine text="Resolving encryption key…" />}
+          {!keyReady && <StatusLine text="Preparing secure channel…" />}
 
-          {keyReady && isIdle && <StatusLine text="Connecting…" />}
+          {keyReady && isIdle && <StatusLine text="Setting up connection…" />}
 
           {keyReady && isSender && isConnecting && !isDone && (
-            <StatusLine text="Waiting for the recipient to open the link" />
+            <StatusLine text="Waiting for the recipient to join…" />
           )}
 
           {keyReady && !isSender && isConnecting && !isDone && (
-            <StatusLine text="Connected — waiting for sender" />
+            <StatusLine text="Connecting to sender…" />
           )}
 
           {isConnected && !isTransfer && !isDone && (
-            <StatusLine text="Starting transfer…" />
+            <StatusLine text="Connected — starting transfer…" tone="success" />
           )}
 
           {isPeerLeft && (
-            <StatusLine
-              text={isSender ? 'The recipient left the room' : 'The sender disconnected'}
-              tone="warning"
-            />
+            <StatusLine text="The other peer disconnected." tone="warning" />
           )}
 
           {isError && (
-            <StatusLine
-              text="Connection failed. Refresh and try again."
-              tone="error"
-            />
+            <StatusLine text="Something went wrong. Try refreshing." tone="error" />
           )}
 
           {/* Progress */}
           {showProgress && (
-            <div className="rounded-lg border border-zinc-200 bg-white p-4">
+            <div className="glass rounded-2xl p-6 shadow-soft">
               <ProgressBar
                 progress={progress}
                 label={isSender ? 'Sending' : 'Receiving'}
@@ -178,41 +183,56 @@ export default function Room() {
           )}
 
           {isDone && isSender && (
-            <StatusLine text="File sent successfully" tone="success" />
+            <StatusLine text="✓ File sent successfully" tone="success" />
           )}
 
           {fileResult && (
-            <HashResult verified={fileResult.verified} hash={fileResult.hash} />
+            <div className="space-y-3 animate-scale-in">
+              <HashResult verified={fileResult.verified} hash={fileResult.hash} />
+              {fileResult.url && (
+                <a
+                  href={fileResult.url}
+                  download={fileResult.filename}
+                  className="block w-full text-center py-3.5 rounded-xl bg-gradient-brand text-white font-semibold shadow-glow hover:shadow-glow-lg btn-press"
+                >
+                  ⬇ Download {fileResult.filename}
+                </a>
+              )}
+            </div>
           )}
 
           <ConnectionLog logs={logs} />
 
           <button
             onClick={handleSendAnother}
-            className="w-full rounded-lg border border-zinc-200 hover:bg-zinc-50 px-4 py-3 text-sm font-medium text-zinc-700 transition-colors"
+            className="w-full py-3 rounded-xl bg-white/60 backdrop-blur-sm border border-zinc-200 text-zinc-700 font-medium hover:bg-white hover:border-accent-300 hover:text-accent-700 btn-press transition-all"
           >
-            Send another file
+            ↻ Send another file
           </button>
         </div>
       </main>
 
-      <footer className="px-6 py-6 text-center">
-        <p className="text-xs text-zinc-400">
-          Files are end-to-end encrypted and never stored on a server.
-        </p>
+      <footer className="border-t border-zinc-200/60 backdrop-blur-md bg-white/50">
+        <div className="max-w-5xl mx-auto px-6 py-4 text-center">
+          <p className="text-xs text-zinc-500">
+            🔒 Files are end-to-end encrypted and never stored on a server.
+          </p>
+        </div>
       </footer>
     </div>
   );
 }
 
 function StatusLine({ text, tone = 'default' }) {
-  const colors = {
-    default: 'text-zinc-500',
-    warning: 'text-amber-600',
-    error: 'text-red-500',
-    success: 'text-emerald-600',
+  const styles = {
+    default: 'text-zinc-600 bg-zinc-50 border-zinc-200',
+    warning: 'text-amber-700 bg-amber-50 border-amber-200',
+    error: 'text-red-700 bg-red-50 border-red-200',
+    success: 'text-emerald-700 bg-emerald-50 border-emerald-200',
   };
   return (
-    <p className={`text-sm text-center py-1 ${colors[tone]}`}>{text}</p>
+    <div className={`text-sm text-center px-4 py-3 rounded-xl border ${styles[tone]} animate-fade-in font-medium`}>
+      {text}
+    </div>
   );
 }

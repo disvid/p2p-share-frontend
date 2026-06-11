@@ -70,28 +70,36 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fafafa] flex flex-col">
+    <div className="min-h-screen flex flex-col">
       {/* Nav */}
-      <header className="px-6 py-5 border-b border-zinc-200">
-        <div className="mx-auto max-w-2xl flex items-center justify-between">
-          <span className="text-base font-semibold tracking-tight text-zinc-900">
-            Drop
-          </span>
-          <span className="text-xs text-zinc-400">
+      <nav className="border-b border-zinc-200/60 backdrop-blur-md bg-white/50 sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-brand shadow-glow animate-float flex items-center justify-center text-white font-bold text-sm">
+              D
+            </div>
+            <span className="font-bold text-lg text-gradient">Drop</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-medium text-zinc-600">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             Peer-to-peer · Encrypted
-          </span>
+          </div>
         </div>
-      </header>
+      </nav>
 
       {/* Main */}
-      <main className="flex-1 flex flex-col items-center px-6 py-16">
-        <div className="w-full max-w-md space-y-8">
-
-          <div className="text-center space-y-2">
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
-              Send a file, browser to browser
+      <main className="flex-1 flex items-center justify-center px-6 py-12">
+        <div className="w-full max-w-2xl space-y-8 animate-fade-in-up">
+          <div className="text-center space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-50 border border-accent-200 text-xs font-medium text-accent-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent-500 animate-pulse" />
+              End-to-end encrypted
+            </div>
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-zinc-900 leading-tight">
+              Send a file,{' '}
+              <span className="text-gradient">browser to browser</span>
             </h1>
-            <p className="text-sm text-zinc-500">
+            <p className="text-zinc-500 text-lg max-w-md mx-auto">
               No accounts. No uploads. The file goes directly to the other person.
             </p>
           </div>
@@ -99,63 +107,84 @@ export default function Home() {
           <DropZone onFileSelect={handleFileSelect} selectedFile={file} />
 
           {error && (
-            <p className="text-sm text-red-500 text-center">{error}</p>
+            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3 animate-fade-in">
+              {error}
+            </div>
           )}
 
           {file && !generatedRoom && (
             <button
               onClick={handleCreateRoom}
               disabled={creating}
-              className="w-full rounded-lg bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 px-4 py-3 text-sm font-medium text-white transition-colors disabled:opacity-50"
+              className="w-full py-3.5 rounded-xl bg-gradient-brand text-white font-semibold shadow-glow hover:shadow-glow-lg btn-press disabled:opacity-60 disabled:cursor-not-allowed animate-scale-in"
             >
-              {creating ? 'Generating link…' : 'Create link'}
+              {creating ? (
+                <span className="inline-flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  Generating secure link…
+                </span>
+              ) : (
+                'Create secure link'
+              )}
             </button>
           )}
 
           {generatedRoom && (
-            <div className="space-y-3 animate-fade-in">
-              <div className="rounded-lg border border-zinc-200 bg-white p-4 space-y-3">
+            <div className="space-y-4 animate-scale-in">
+              <div className="glass rounded-2xl p-6 shadow-soft space-y-4">
                 <div>
-                  <p className="text-xs text-zinc-400 mb-1">Share this link</p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 mono text-xs text-zinc-700 bg-zinc-50 border border-zinc-200 rounded-md px-3 py-2 truncate">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-emerald-600">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
+                    <h3 className="font-semibold text-zinc-900">Share this link</h3>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1 px-3 py-2.5 rounded-lg bg-zinc-50 border border-zinc-200 mono text-xs text-zinc-700 truncate">
                       {roomLink}
-                    </code>
+                    </div>
                     <button
                       onClick={handleCopyLink}
-                      className="shrink-0 text-xs font-medium px-3 py-2 rounded-md border border-zinc-200 hover:bg-zinc-50 transition-colors text-zinc-700"
+                      className={`px-4 py-2.5 rounded-lg font-medium text-sm btn-press transition-all ${
+                        copied
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-zinc-900 text-white hover:bg-zinc-700'
+                      }`}
                     >
-                      {copied ? 'Copied' : 'Copy'}
+                      {copied ? '✓ Copied' : 'Copy'}
                     </button>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-zinc-400 pt-1 border-t border-zinc-100">
-                  <span className="truncate mr-2">{file.name}</span>
-                  <span className="shrink-0">{formatBytes(file.size)}</span>
+                <div className="flex items-center justify-between text-sm pt-3 border-t border-zinc-200/60">
+                  <span className="font-medium text-zinc-800 truncate mr-2">{file.name}</span>
+                  <span className="text-zinc-500 mono text-xs whitespace-nowrap">{formatBytes(file.size)}</span>
                 </div>
               </div>
 
               <button
                 onClick={handleGoToRoom}
-                className="w-full rounded-lg bg-zinc-900 hover:bg-zinc-800 px-4 py-3 text-sm font-medium text-white transition-colors"
+                className="w-full py-3.5 rounded-xl bg-white border-2 border-accent-200 text-accent-700 font-semibold hover:border-accent-400 hover:bg-accent-50 btn-press transition-all"
               >
-                Open transfer room
+                Open transfer room →
               </button>
 
-              <p className="text-xs text-center text-zinc-400">
+              <p className="text-center text-xs text-zinc-500">
                 Waiting for the recipient to open the link starts the transfer automatically.
               </p>
             </div>
           )}
-
         </div>
       </main>
 
-      <footer className="px-6 py-6 text-center">
-        <p className="text-xs text-zinc-400">
-          Files are end-to-end encrypted and never stored on a server.
-        </p>
+      <footer className="border-t border-zinc-200/60 backdrop-blur-md bg-white/50">
+        <div className="max-w-5xl mx-auto px-6 py-4 text-center">
+          <p className="text-xs text-zinc-500">
+            🔒 Files are end-to-end encrypted and never stored on a server.
+          </p>
+        </div>
       </footer>
     </div>
   );

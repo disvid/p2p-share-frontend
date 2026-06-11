@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -10,30 +10,97 @@ html {
 
 body {
   background-color: #fafafa;
+  background-image:
+    radial-gradient(at 15% 10%, rgba(224, 231, 255, 0.6) 0px, transparent 50%),
+    radial-gradient(at 85% 0%, rgba(252, 231, 243, 0.5) 0px, transparent 50%),
+    radial-gradient(at 75% 90%, rgba(207, 250, 254, 0.5) 0px, transparent 50%);
+  background-attachment: fixed;
   color: #18181b;
+  min-height: 100vh;
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d4d4d8;
-  border-radius: 3px;
+  background: linear-gradient(180deg, #c7d2fe, #a5b4fc);
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #a1a1aa;
+  background: linear-gradient(180deg, #818cf8, #6366f1);
 }
 
-/* Subtle progress bar fill animation */
+/* Animated gradient progress fill */
 .progress-fill {
-  transition: width 0.25s ease-out;
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(90deg, #6366f1, #7c3aed, #ec4899, #6366f1);
+  background-size: 200% 100%;
+  animation: gradientShift 3s ease infinite;
+  position: relative;
+  overflow: hidden;
 }
 
-/* Monospace for room codes / hashes */
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
 .mono {
   font-family: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, monospace;
+}
+
+/* Gradient text helper */
+.text-gradient {
+  background: linear-gradient(135deg, #6366f1 0%, #7c3aed 50%, #ec4899 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 200% auto;
+  animation: gradientShift 5s ease infinite;
+}
+
+/* Glass card */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+/* Button press feedback */
+.btn-press {
+  transition: transform 0.1s ease, box-shadow 0.2s ease;
+}
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* Focus ring */
+*:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+  border-radius: 6px;
 }

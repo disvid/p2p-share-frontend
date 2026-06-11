@@ -7,22 +7,36 @@ export default function ProgressBar({ progress, label }) {
   const done = pct >= 100;
 
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-2 animate-fade-in">
       <div className="flex items-center justify-between text-sm">
-        <span className="text-zinc-700">{label}</span>
-        <span className="mono text-zinc-900 font-medium">{pct}%</span>
+        <span className="font-semibold text-zinc-800">{label}</span>
+        <span className={`mono font-bold tabular-nums transition-colors ${done ? 'text-emerald-600' : 'text-accent-600'}`}>
+          {pct}%
+        </span>
       </div>
 
-      <div className="h-1.5 w-full rounded-full bg-zinc-100 overflow-hidden">
+      <div className="relative h-2.5 w-full rounded-full bg-zinc-100 overflow-hidden shadow-inner">
         <div
-          className={`h-full rounded-full progress-fill ${done ? 'bg-emerald-500' : 'bg-zinc-900'}`}
+          className={`progress-fill h-full rounded-full ${done ? '!bg-emerald-500 !animate-none' : ''}`}
           style={{ width: `${pct}%` }}
         />
       </div>
 
-      <div className="flex items-center justify-between text-xs text-zinc-400 mono">
-        <span>{formatBytes(transferred)} / {formatBytes(total)}</span>
-        <span>{done ? '—' : `${formatSpeed(speed)} · ${formatETA(eta)}`}</span>
+      <div className="flex items-center justify-between text-xs text-zinc-500 mono">
+        <span className="tabular-nums">
+          {formatBytes(transferred)} <span className="text-zinc-400">/</span> {formatBytes(total)}
+        </span>
+        <span className="tabular-nums">
+          {done ? (
+            <span className="text-emerald-600 font-semibold">✓ Done</span>
+          ) : (
+            <>
+              <span className="text-accent-600">{formatSpeed(speed)}</span>
+              <span className="text-zinc-400 mx-1.5">·</span>
+              <span>{formatETA(eta)}</span>
+            </>
+          )}
+        </span>
       </div>
     </div>
   );
