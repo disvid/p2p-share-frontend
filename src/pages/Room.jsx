@@ -18,55 +18,34 @@ export default function Room() {
 
   const [logs, setLogs] = useState([]);
   const [copied, setCopied] = useState(false);
-  const [resolvedKey, setResolvedKey] = useState(null); // CryptoKey
+  const [resolvedKey, setResolvedKey] = useState(null);
   const [keyReady, setKeyReady] = useState(false);
 
   const { progress, fileResult, updateProgress, setResult } = useFileTransfer();
 
   const addLog = useCallback((msg) => {
-    setLogs((prev) => [...prev.slice(-200), msg]); // cap at 200 entries
+    setLogs((prev) => [...prev.slice(-200), msg]);
   }, []);
 
-  const handleFileReceived = useCallback(
-    (result) => {
-      setResult(result);
-    },
-    [setResult]
-  );
+  const handleFileReceived = useCallback((result) => setResult(result), [setResult]);
 
-  // ── Resolve the AES-GCM encryption key ─────────────────────────────────
-  // - Sender already has the CryptoKey in context (generated on Home page)
-  // - Receiver must import it from the URL fragment (#key=...)
-  //   The fragment is NEVER sent to the server, so this is zero-knowledge.
   useEffect(() => {
     if (selectedFile && senderKey) {
       setResolvedKey(senderKey);
       setKeyReady(true);
       return;
     }
-
-    const hash = window.location.hash; // e.g. "#key=abc123..."
+    const hash = window.location.hash;
     const match = hash.match(/key=([^&]+)/);
-
     if (match) {
       importKeyFromBase64(match[1])
-        .then((k) => {
-          setResolvedKey(k);
-          setKeyReady(true);
-          addLog('🔑 Encryption key loaded from link');
-        })
-        .catch((err) => {
-          addLog(`⚠️ Could not load encryption key: ${err.message}`);
-          setKeyReady(true); // proceed in unencrypted mode
-        });
+        .then((k) => { setResolvedKey(k); setKeyReady(true); })
+        .catch(() => setKeyReady(true));
     } else {
-      // No key in URL — unencrypted mode
       setKeyReady(true);
     }
-  }, [selectedFile, senderKey, addLog]);
+  }, [selectedFile, senderKey]);
 
-  // Delay join-room until the key resolution attempt is finished,
-  // so the receiver doesn't start receiving chunks before it can decrypt them.
   const { status, role } = useWebRTC({
     roomId: keyReady ? roomId : null,
     file: selectedFile || null,
@@ -76,22 +55,18 @@ export default function Room() {
     encryptionKey: resolvedKey,
   });
 
-  // Sender metadata — either from live File object or from sessionStorage cache
   const senderMeta = selectedFile
     ? { name: selectedFile.name, size: selectedFile.size, type: selectedFile.type }
     : getSenderMeta();
 
-  // Is this tab the sender?
   const isSender = !!selectedFile || (senderMeta && senderMeta.roomId === roomId);
-
-  // Full URL including the #key= fragment, so the link stays shareable end-to-end
   const roomLink = typeof window !== 'undefined' ? window.location.href : '';
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(roomLink);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      setTimeout(() => setCopied(false), 2000);
     } catch (_) {}
   };
 
@@ -100,7 +75,6 @@ export default function Room() {
     navigate('/');
   };
 
-  // Derived booleans for UI
   const isIdle       = status === CONN_STATUS.IDLE;
   const isConnecting = status === CONN_STATUS.CONNECTING;
   const isConnected  = status === CONN_STATUS.CONNECTED;
@@ -108,259 +82,137 @@ export default function Room() {
   const isDone       = status === CONN_STATUS.DONE || !!fileResult;
   const isPeerLeft   = status === CONN_STATUS.PEER_LEFT;
   const isError      = status === CONN_STATUS.ERROR;
-
   const showProgress = (isTransfer || isDone) && progress.total > 0;
 
-  // Role label with icon
-  const roleLabel = !role
-    ? '⏳ Joining…'
-    : role === 'sender'
-    ? '📤 Sender'
-    : '📥 Receiver';
+  const roleLabel = !role ? 'Joining' : role === 'sender' ? 'Sending' : 'Receiving';
 
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col">
-      {/* ── Header ── */}
-      <header className="border-b border-gray-800/60 px-6 py-4">
-        <div className="mx-auto max-w-3xl flex items-center justify-between">
-          <Link
-            to="/"
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-          >
-            <span className="text-2xl">📡</span>
-            <span className="text-lg font-bold text-white">P2P Web Share</span>
+    <div className="min-h-screen bg-[#fafafa] flex flex-col">
+      <header className="px-6 py-5 border-b border-zinc-200">
+        <div className="mx-auto max-w-2xl flex items-center justify-between">
+          <Link to="/" className="text-base font-semibold tracking-tight text-zinc-900">
+            Drop
           </Link>
           <StatusBadge status={status} />
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-8">
-        <div className="mx-auto max-w-lg space-y-4 animate-slide-up">
+      <main className="flex-1 flex flex-col items-center px-6 py-16">
+        <div className="w-full max-w-md space-y-4">
 
-          {/* ── Room info card ── */}
-          <div className="rounded-2xl bg-gray-900/60 border border-gray-700/50 p-5 space-y-4 shadow-xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">
-                  Room ID
-                </p>
-                <p className="font-mono text-sm text-brand-300 font-semibold break-all">
-                  {roomId}
-                </p>
+          {/* File card */}
+          <div className="rounded-lg border border-zinc-200 bg-white p-4 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs text-zinc-400 mb-1">{roleLabel}</p>
+                {senderMeta || fileResult ? (
+                  <>
+                    <p className="text-sm font-medium text-zinc-900 truncate">
+                      {fileResult?.filename || senderMeta?.name}
+                    </p>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      {formatBytes(fileResult?.blob?.size ?? senderMeta?.size ?? 0)}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-zinc-400">Waiting for file information…</p>
+                )}
               </div>
-              <span className="shrink-0 rounded-full bg-gray-800 border border-gray-700 px-3 py-1 text-xs font-semibold text-gray-300">
-                {roleLabel}
-              </span>
+              {resolvedKey && (
+                <span className="shrink-0 text-xs text-zinc-400 mt-0.5">Encrypted</span>
+              )}
             </div>
 
-            {/* Room link */}
-            <div className="rounded-xl bg-gray-800/60 border border-gray-700/40 p-3 space-y-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">
-                Room Link
-              </p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 truncate text-xs text-gray-300 font-mono">
-                  {roomLink}
-                </code>
+            {!isSender && (
+              <div className="flex items-center gap-2 pt-1 border-t border-zinc-100">
+                <code className="flex-1 mono text-xs text-zinc-500 truncate">{roomLink}</code>
                 <button
                   onClick={handleCopy}
-                  className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                    copied
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                  }`}
+                  className="shrink-0 text-xs font-medium px-2.5 py-1.5 rounded-md border border-zinc-200 hover:bg-zinc-50 transition-colors text-zinc-600"
                 >
-                  {copied ? '✓ Copied' : '📋 Copy'}
+                  {copied ? 'Copied' : 'Copy'}
                 </button>
               </div>
-            </div>
-
-            {/* Encryption status badge */}
-            {resolvedKey ? (
-              <p className="text-xs text-emerald-400 flex items-center gap-1.5">
-                <span>🔒</span>
-                End-to-end encrypted (AES-256-GCM) — key never sent to server
-              </p>
-            ) : keyReady ? (
-              <p className="text-xs text-gray-500 flex items-center gap-1.5">
-                <span>🔓</span>
-                Unencrypted transfer (no key found in link)
-              </p>
-            ) : null}
+            )}
           </div>
 
-          {/* ── File info ── */}
-          {isSender && senderMeta && (
-            <div className="flex items-center gap-3 rounded-xl bg-gray-800/60 border border-gray-700/50 px-4 py-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-700 text-xl">
-                📁
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-500 mb-0.5">
-                  Sending
-                </p>
-                <p className="text-sm font-semibold text-white truncate">
-                  {senderMeta.name}
-                </p>
-                <p className="text-xs text-gray-400">
-                  {formatBytes(senderMeta.size)}
-                  {senderMeta.type ? ` · ${senderMeta.type}` : ''}
-                </p>
-              </div>
-            </div>
-          )}
+          {/* Status messages */}
+          {!keyReady && <StatusLine text="Resolving encryption key…" />}
 
-          {fileResult && !isSender && (
-            <div className="flex items-center gap-3 rounded-xl bg-gray-800/60 border border-gray-700/50 px-4 py-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-700 text-xl">
-                📥
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-500 mb-0.5">
-                  Received
-                </p>
-                <p className="text-sm font-semibold text-white truncate">
-                  {fileResult.filename}
-                </p>
-                <p className="text-xs text-gray-400">
-                  {formatBytes(fileResult.blob?.size || 0)}
-                </p>
-              </div>
-            </div>
-          )}
+          {keyReady && isIdle && <StatusLine text="Connecting…" />}
 
-          {/* ── Status messages ── */}
-
-          {/* Resolving encryption key */}
-          {!keyReady && (
-            <InfoCard icon="🔑" text="Resolving encryption key…" />
-          )}
-
-          {/* Joining */}
-          {keyReady && isIdle && (
-            <InfoCard icon="⏳" text="Connecting to signaling server…" />
-          )}
-
-          {/* Sender waiting */}
           {keyReady && isSender && isConnecting && !isDone && (
-            <InfoCard
-              icon="🔗"
-              text="Waiting for the receiver to open the link in another browser…"
-            />
+            <StatusLine text="Waiting for the recipient to open the link" />
           )}
 
-          {/* Receiver waiting */}
           {keyReady && !isSender && isConnecting && !isDone && (
-            <InfoCard
-              icon="📡"
-              text="Connected to room — waiting for sender to initiate…"
-            />
+            <StatusLine text="Connected — waiting for sender" />
           )}
 
-          {/* Both connected, about to start */}
           {isConnected && !isTransfer && !isDone && (
-            <InfoCard icon="✅" text="Peer connected — starting transfer…" />
+            <StatusLine text="Starting transfer…" />
           )}
 
-          {/* Peer left */}
           {isPeerLeft && (
-            <AlertCard
-              icon="⚠️"
-              title="Peer disconnected"
-              message={
-                isSender
-                  ? 'The receiver left the room.'
-                  : 'The sender disconnected. Transfer may be incomplete.'
-              }
-              type="warning"
+            <StatusLine
+              text={isSender ? 'The recipient left the room' : 'The sender disconnected'}
+              tone="warning"
             />
           )}
 
-          {/* Error */}
           {isError && (
-            <AlertCard
-              icon="❌"
-              title="Connection Failed"
-              message="WebRTC could not establish a connection. Make sure both browsers are open simultaneously and try again."
-              type="error"
+            <StatusLine
+              text="Connection failed. Refresh and try again."
+              tone="error"
             />
           )}
 
-          {/* ── Progress bar ── */}
+          {/* Progress */}
           {showProgress && (
-            <div className="rounded-2xl bg-gray-900/60 border border-gray-700/50 p-5 shadow-xl animate-fade-in">
+            <div className="rounded-lg border border-zinc-200 bg-white p-4">
               <ProgressBar
                 progress={progress}
-                label={isSender ? 'Sending file…' : 'Receiving file…'}
+                label={isSender ? 'Sending' : 'Receiving'}
               />
             </div>
           )}
 
-          {/* ── Sender: done ── */}
           {isDone && isSender && (
-            <div className="rounded-xl border border-emerald-600/50 bg-emerald-900/20 px-4 py-3 animate-fade-in">
-              <p className="text-sm font-semibold text-emerald-300">
-                ✅ File sent! The receiver's browser will download it automatically.
-              </p>
-            </div>
+            <StatusLine text="File sent successfully" tone="success" />
           )}
 
-          {/* ── Receiver: hash result ── */}
           {fileResult && (
             <HashResult verified={fileResult.verified} hash={fileResult.hash} />
           )}
 
-          {/* ── Instructions for receiver ── */}
-          {!isSender && !role && (
-            <div className="rounded-xl border border-blue-700/40 bg-blue-900/20 px-4 py-3">
-              <p className="text-xs text-blue-300">
-                ℹ️ You've opened a share room. The file will transfer automatically once the sender is ready.
-              </p>
-            </div>
-          )}
-
-          {/* ── Connection log ── */}
           <ConnectionLog logs={logs} />
 
-          {/* ── Actions ── */}
           <button
             onClick={handleSendAnother}
-            className="w-full rounded-xl border border-gray-700/50 bg-gray-800/40 hover:bg-gray-700/40 px-4 py-3 text-sm font-medium text-gray-300 transition-all"
+            className="w-full rounded-lg border border-zinc-200 hover:bg-zinc-50 px-4 py-3 text-sm font-medium text-zinc-700 transition-colors"
           >
-            ← Send Another File
+            Send another file
           </button>
         </div>
       </main>
 
-      <footer className="border-t border-gray-800/60 py-4 text-center text-xs text-gray-600">
-        P2P Web Share · End-to-end encrypted · File data never touches the server
+      <footer className="px-6 py-6 text-center">
+        <p className="text-xs text-zinc-400">
+          Files are end-to-end encrypted and never stored on a server.
+        </p>
       </footer>
     </div>
   );
 }
 
-function InfoCard({ icon, text }) {
+function StatusLine({ text, tone = 'default' }) {
+  const colors = {
+    default: 'text-zinc-500',
+    warning: 'text-amber-600',
+    error: 'text-red-500',
+    success: 'text-emerald-600',
+  };
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-gray-800/40 border border-gray-700/40 px-4 py-3 animate-fade-in">
-      <span className="text-xl shrink-0">{icon}</span>
-      <p className="text-sm text-gray-300">{text}</p>
-    </div>
-  );
-}
-
-function AlertCard({ icon, title, message, type }) {
-  const colors =
-    type === 'error'
-      ? 'border-red-600/50 bg-red-900/20'
-      : 'border-orange-600/50 bg-orange-900/20';
-  const titleColor = type === 'error' ? 'text-red-300' : 'text-orange-300';
-  return (
-    <div className={`rounded-xl border px-4 py-3 animate-fade-in ${colors}`}>
-      <div className="flex items-center gap-2 mb-1">
-        <span>{icon}</span>
-        <p className={`text-sm font-bold ${titleColor}`}>{title}</p>
-      </div>
-      <p className="text-xs text-gray-400">{message}</p>
-    </div>
+    <p className={`text-sm text-center py-1 ${colors[tone]}`}>{text}</p>
   );
 }

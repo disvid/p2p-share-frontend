@@ -1,9 +1,3 @@
-/**
- * DropZone.jsx
- * Drag-and-drop + click-to-browse file selection.
- * Shows file info after selection and validates size limit.
- */
-
 import React, { useRef, useState, useCallback } from 'react';
 import { MAX_FILE_SIZE } from '../utils/constants.js';
 import { formatBytes, truncateFilename } from '../utils/format.js';
@@ -17,7 +11,7 @@ export default function DropZone({ onFileSelect, selectedFile }) {
     (file) => {
       if (!file) return;
       if (file.size > MAX_FILE_SIZE) {
-        setError(`File too large. Max size is 2 GB. Your file: ${formatBytes(file.size)}`);
+        setError(`File too large. Max ${formatBytes(MAX_FILE_SIZE)}.`);
         return;
       }
       setError('');
@@ -30,22 +24,10 @@ export default function DropZone({ onFileSelect, selectedFile }) {
     (e) => {
       e.preventDefault();
       setDragging(false);
-      const file = e.dataTransfer.files[0];
-      processFile(file);
+      processFile(e.dataTransfer.files[0]);
     },
     [processFile]
   );
-
-  const onDragOver = (e) => {
-    e.preventDefault();
-    setDragging(true);
-  };
-
-  const onDragLeave = () => setDragging(false);
-
-  const onInputChange = (e) => {
-    processFile(e.target.files[0]);
-  };
 
   return (
     <div className="w-full">
@@ -53,97 +35,74 @@ export default function DropZone({ onFileSelect, selectedFile }) {
         role="button"
         tabIndex={0}
         onDrop={onDrop}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
         onClick={() => inputRef.current?.click()}
         onKeyDown={(e) => e.key === 'Enter' && inputRef.current?.click()}
         className={`
-          relative flex flex-col items-center justify-center gap-4
-          w-full min-h-[220px] rounded-2xl border-2 border-dashed
-          cursor-pointer select-none
-          transition-all duration-200
+          relative flex flex-col items-center justify-center gap-3
+          w-full min-h-[200px] rounded-xl border
+          cursor-pointer select-none transition-colors duration-150
           ${
             dragging
-              ? 'border-brand-400 bg-brand-500/10 drop-active scale-[1.01]'
+              ? 'border-zinc-900 bg-zinc-50'
               : selectedFile
-              ? 'border-emerald-500/60 bg-emerald-500/5'
-              : 'border-gray-600 bg-gray-800/40 hover:border-brand-500/60 hover:bg-gray-800/60'
+              ? 'border-zinc-300 bg-white'
+              : 'border-zinc-200 bg-white hover:border-zinc-300'
           }
         `}
+        style={{ borderStyle: 'dashed' }}
       >
-        <input
-          ref={inputRef}
-          type="file"
-          className="hidden"
-          onChange={onInputChange}
-          // Accept all file types
-        />
+        <input ref={inputRef} type="file" className="hidden" onChange={(e) => processFile(e.target.files[0])} />
 
         {selectedFile ? (
-          /* File selected state */
-          <div className="flex flex-col items-center gap-3 p-6 text-center animate-fade-in">
-            <div className="text-5xl">{getFileEmoji(selectedFile.name)}</div>
-            <div className="space-y-1">
-              <p className="text-base font-semibold text-white">
+          <div className="flex flex-col items-center gap-2 px-6 py-2 text-center animate-fade-in">
+            <FileIcon />
+            <div>
+              <p className="text-sm font-medium text-zinc-900">
                 {truncateFilename(selectedFile.name)}
               </p>
-              <p className="text-sm text-gray-400">{formatBytes(selectedFile.size)}</p>
-              <p className="text-xs text-gray-500">{selectedFile.type || 'Unknown type'}</p>
+              <p className="text-xs text-zinc-400 mt-0.5">{formatBytes(selectedFile.size)}</p>
             </div>
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                inputRef.current?.click();
-              }}
-              className="mt-1 text-xs text-brand-400 hover:text-brand-300 underline underline-offset-2"
+              onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}
+              className="text-xs text-zinc-400 hover:text-zinc-700 underline underline-offset-2 mt-1"
             >
-              Change file
+              Choose a different file
             </button>
           </div>
         ) : (
-          /* Empty state */
-          <div className="flex flex-col items-center gap-3 p-6 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-700/60 text-3xl">
-              📂
-            </div>
-            <div className="space-y-1">
-              <p className="text-base font-medium text-gray-200">
-                {dragging ? 'Drop it here!' : 'Drag & drop your file'}
+          <div className="flex flex-col items-center gap-2 px-6 py-2 text-center">
+            <UploadIcon />
+            <div>
+              <p className="text-sm text-zinc-700">
+                Drag and drop a file
               </p>
-              <p className="text-sm text-gray-500">
-                or{' '}
-                <span className="text-brand-400 hover:text-brand-300 underline underline-offset-2">
-                  click to browse
-                </span>
-              </p>
+              <p className="text-xs text-zinc-400 mt-0.5">or click to browse</p>
             </div>
-            <p className="text-xs text-gray-600">Max 2 GB · Any file type · End-to-end encrypted</p>
           </div>
         )}
       </div>
 
-      {error && (
-        <p className="mt-2 text-sm text-red-400 flex items-center gap-1">
-          <span>⚠️</span> {error}
-        </p>
-      )}
+      {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
     </div>
   );
 }
 
-/** Returns an emoji based on file extension for visual flair. */
-function getFileEmoji(filename) {
-  const ext = filename.split('.').pop().toLowerCase();
-  const map = {
-    pdf: '📄', doc: '📝', docx: '📝',
-    xls: '📊', xlsx: '📊', csv: '📊',
-    jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', webp: '🖼️', svg: '🖼️',
-    mp4: '🎬', mov: '🎬', avi: '🎬', mkv: '🎬',
-    mp3: '🎵', wav: '🎵', flac: '🎵', ogg: '🎵',
-    zip: '📦', rar: '📦', tar: '📦', gz: '📦',
-    js: '💻', ts: '💻', jsx: '💻', tsx: '💻', py: '💻', java: '💻',
-    html: '🌐', css: '🎨', json: '⚙️',
-    txt: '📋', md: '📋',
-  };
-  return map[ext] || '📁';
+function UploadIcon() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-zinc-300">
+      <path d="M12 16V4M12 4L7 9M12 4l5 5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function FileIcon() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-zinc-400">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M14 2v6h6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
 }

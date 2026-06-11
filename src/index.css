@@ -1,60 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Custom scrollbar for dark theme */
+html {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+body {
+  background-color: #fafafa;
+  color: #18181b;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #111827;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: #d4d4d8;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #4b5563;
+  background: #a1a1aa;
 }
 
-/* Smooth transitions globally */
-* {
-  transition-property: background-color, border-color, color, opacity;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
+/* Subtle progress bar fill animation */
+.progress-fill {
+  transition: width 0.25s ease-out;
 }
 
-/* Prevent transition on layout/transform properties */
-.no-transition {
-  transition: none !important;
-}
-
-/* Progress bar shimmer animation */
-@keyframes shimmer {
-  0% { background-position: -200% center; }
-  100% { background-position: 200% center; }
-}
-
-.progress-shimmer {
-  background: linear-gradient(
-    90deg,
-    #0ea5e9 0%,
-    #38bdf8 40%,
-    #7dd3fc 50%,
-    #38bdf8 60%,
-    #0ea5e9 100%
-  );
-  background-size: 200% auto;
-  animation: shimmer 2s linear infinite;
-}
-
-/* Drop zone pulse border */
-@keyframes borderPulse {
-  0%, 100% { border-color: #0ea5e9; }
-  50% { border-color: #38bdf8; }
-}
-
-.drop-active {
-  animation: borderPulse 1s ease-in-out infinite;
+/* Monospace for room codes / hashes */
+.mono {
+  font-family: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, monospace;
 }
