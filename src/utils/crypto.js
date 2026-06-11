@@ -1,10 +1,3 @@
-/**
- * crypto.js
- * Zero-knowledge AES-256-GCM encryption.
- * The key NEVER touches the signaling server — it lives only in the
- * URL fragment (#key=...), which browsers never send to servers.
- */
-
 export async function generateEncryptionKey() {
   const key = await crypto.subtle.generateKey(
     { name: 'AES-GCM', length: 256 },
@@ -20,9 +13,6 @@ export async function importKeyFromBase64(b64) {
   return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, true, ['encrypt', 'decrypt']);
 }
 
-/**
- * Encrypts an ArrayBuffer chunk. Output = [12-byte IV][ciphertext+16-byte tag]
- */
 export async function encryptChunk(key, buffer) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, buffer);

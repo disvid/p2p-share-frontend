@@ -1,22 +1,19 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const TransferContext = createContext(null);
-
 const SESSION_KEY = 'p2p_sender_meta';
 
 export function TransferProvider({ children }) {
   const [selectedFile, setSelectedFileState] = useState(null);
-  const [roomId, setRoomId] = useState(null);
+  const [roomId, setRoomIdState] = useState(null);
   const [encryptionKey, setEncryptionKey] = useState(null);
 
-  // On mount, try to restore roomId from sessionStorage
-  // (file itself cannot be restored — only metadata for display)
   useEffect(() => {
     const raw = sessionStorage.getItem(SESSION_KEY);
     if (raw) {
       try {
         const meta = JSON.parse(raw);
-        if (meta.roomId) setRoomId(meta.roomId);
+        if (meta.roomId) setRoomIdState(meta.roomId);
       } catch (_) {}
     }
   }, []);
@@ -24,7 +21,6 @@ export function TransferProvider({ children }) {
   const setSelectedFile = (file) => {
     setSelectedFileState(file);
     if (file) {
-      // Persist metadata so Room page can read it after navigate()
       sessionStorage.setItem(
         SESSION_KEY,
         JSON.stringify({ name: file.name, size: file.size, type: file.type })
@@ -34,9 +30,8 @@ export function TransferProvider({ children }) {
     }
   };
 
-  const setSenderRoom = (id) => {
-    setRoomId(id);
-    // Merge roomId into existing session meta
+  const setRoomId = (id) => {
+    setRoomIdState(id);
     const raw = sessionStorage.getItem(SESSION_KEY);
     const existing = raw ? JSON.parse(raw) : {};
     sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ...existing, roomId: id }));
@@ -44,16 +39,11 @@ export function TransferProvider({ children }) {
 
   const clearTransfer = () => {
     setSelectedFileState(null);
-    setRoomId(null);
+    setRoomIdState(null);
     setEncryptionKey(null);
     sessionStorage.removeItem(SESSION_KEY);
   };
 
-  /**
-   * Read cached sender metadata (name/size/type) from sessionStorage.
-   * Used by Room page when file object is not in context
-   * (e.g. navigated via link but same tab).
-   */
   const getSenderMeta = () => {
     try {
       const raw = sessionStorage.getItem(SESSION_KEY);
@@ -69,8 +59,8 @@ export function TransferProvider({ children }) {
         selectedFile,
         setSelectedFile,
         roomId,
-        setRoomId: setSenderRoom,
-        encryptionKey, 
+        setRoomId,
+        encryptionKey,
         setEncryptionKey,
         clearTransfer,
         getSenderMeta,

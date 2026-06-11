@@ -4,34 +4,46 @@ import { nanoid } from 'nanoid';
 import DropZone from '../components/DropZone.jsx';
 import FileInfo from '../components/FileInfo.jsx';
 import { useTransferContext } from '../context/TransferContext.jsx';
+import { generateEncryptionKey } from '../utils/crypto.js';
 
 export default function Home() {
   const navigate = useNavigate();
-  const { setSelectedFile, setRoomId } = useTransferContext();
+  const { setSelectedFile, setRoomId, setEncryptionKey } = useTransferContext();
   const [file, setFile] = useState(null);
   const [copied, setCopied] = useState(false);
   const [generatedRoom, setGeneratedRoom] = useState('');
   const [keyB64, setKeyB64] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState('');
 
   const handleFileSelect = useCallback((f) => {
     setFile(f);
-    // Reset any previously generated room when a new file is chosen.
     setGeneratedRoom('');
+    setKeyB64('');
     setCopied(false);
+    setError('');
   }, []);
 
   const handleCreateRoom = async () => {
     if (!file) return;
-    const id = nanoid(10);
-    const { key, base64 } = await generateEncryptionKey(); // NEW
+    setError('');
+    setCreating(true);
+    try {
+      const id = nanoid(10);
+      const { key, base64 } = await generateEncryptionKey();
 
-    setGeneratedRoom(id);
-    setKeyB64(base64);
-    setSelectedFile(file);
-    setRoomId(id);
-    setEncryptionKey(key); // NEW — CryptoKey kept in memory, this tab only
+      setGeneratedRoom(id);
+      setKeyB64(base64);
+      setSelectedFile(file);
+      setRoomId(id);
+      setEncryptionKey(key);
+    } catch (err) {
+      console.error('Create room failed:', err);
+      setError(`Failed to create room: ${err.message}`);
+    } finally {
+      setCreating(false);
+    }
   };
-
 
   const roomLink = generatedRoom
     ? `${window.location.origin}/room/${generatedRoom}#key=${keyB64}`
@@ -44,7 +56,6 @@ export default function Home() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      // Fallback for older browsers
       const ta = document.createElement('textarea');
       ta.value = roomLink;
       document.body.appendChild(ta);
@@ -58,7 +69,7 @@ export default function Home() {
 
   const handleGoToRoom = () => {
     if (generatedRoom) {
-      navigate(`/room/${generatedRoom}`);
+      navigate(`/room/${generatedRoom}#key=${keyB64}`);
     }
   };
 
@@ -72,7 +83,7 @@ export default function Home() {
             <span className="text-lg font-bold text-white">P2P Web Share</span>
           </div>
           <span className="rounded-full bg-brand-900/50 border border-brand-700/40 px-3 py-1 text-xs text-brand-300">
-            No server storage · Direct transfer
+            No server storage · End-to-end encrypted
           </span>
         </div>
       </header>
@@ -114,12 +125,19 @@ export default function Home() {
           <div className="rounded-2xl bg-gray-900/60 border border-gray-700/50 p-6 space-y-4 shadow-xl">
             <DropZone onFileSelect={handleFileSelect} selectedFile={file} />
 
+            {error && (
+              <p className="text-sm text-red-400 flex items-center gap-1">
+                <span>⚠️</span> {error}
+              </p>
+            )}
+
             {file && !generatedRoom && (
               <button
                 onClick={handleCreateRoom}
-                className="w-full rounded-xl bg-brand-600 hover:bg-brand-500 active:scale-95 px-4 py-3 text-sm font-semibold text-white transition-all duration-150 shadow-lg shadow-brand-900/30"
+                disabled={creating}
+                className="w-full rounded-xl bg-brand-600 hover:bg-brand-500 active:scale-95 px-4 py-3 text-sm font-semibold text-white transition-all duration-150 shadow-lg shadow-brand-900/30 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                🔗 Create Room & Generate Link
+                {creating ? '⏳ Generating encryption key…' : '🔗 Create Room & Generate Link'}
               </button>
             )}
 
@@ -136,10 +154,11 @@ export default function Home() {
                     <code className="flex-1 text-xs text-brand-300 bg-gray-900 rounded-lg px-3 py-2 break-all font-mono">
                       {roomLink}
                     </code>
-                    <p className="text-xs text-emerald-400 flex items-center gap-1 mt-1">
-                      🔒 End-to-end encrypted — decryption key is in the link, never sent to any server
-                    </p>
                   </div>
+                  <p className="text-xs text-emerald-400 flex items-center gap-1.5">
+                    <span>🔒</span>
+                    End-to-end encrypted — decryption key is in the link, never sent to any server
+                  </p>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={handleCopyLink}
@@ -170,7 +189,7 @@ export default function Home() {
           {/* Feature bullets */}
           <div className="grid grid-cols-2 gap-2">
             {[
-              { icon: '🔒', text: 'End-to-end encrypted via DTLS' },
+              { icon: '🔒', text: 'End-to-end encrypted (AES-256)' },
               { icon: '⚡', text: 'Direct P2P — no relay' },
               { icon: '✅', text: 'SHA-256 integrity check' },
               { icon: '📱', text: 'Works on mobile browsers' },
