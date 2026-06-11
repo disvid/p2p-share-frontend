@@ -100,7 +100,7 @@ export default function DropZone({ onFileSelect, selectedFile }) {
                 {dragging ? 'Drop it here!' : 'Drag and drop a file'}
               </div>
               <div className="text-xs text-zinc-500 mt-0.5">or click to browse</div>
-              <p className="text-xs text-gray-600">Max 2 GB · Any file type · End-to-end encrypted</p>
+              <p className="text-xs text-gray-600">Max 2 GB · Any file type</p>
             </div>
           </div>
         )}
