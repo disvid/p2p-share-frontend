@@ -1,8 +1,3 @@
-/**
- * Home.jsx
- * Landing page — select a file, generate a room, share the link.
- */
-
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { nanoid } from 'nanoid';
@@ -16,6 +11,7 @@ export default function Home() {
   const [file, setFile] = useState(null);
   const [copied, setCopied] = useState(false);
   const [generatedRoom, setGeneratedRoom] = useState('');
+  const [keyB64, setKeyB64] = useState('');
 
   const handleFileSelect = useCallback((f) => {
     setFile(f);
@@ -24,16 +20,21 @@ export default function Home() {
     setCopied(false);
   }, []);
 
-  const handleCreateRoom = () => {
+  const handleCreateRoom = async () => {
     if (!file) return;
     const id = nanoid(10);
+    const { key, base64 } = await generateEncryptionKey(); // NEW
+
     setGeneratedRoom(id);
+    setKeyB64(base64);
     setSelectedFile(file);
     setRoomId(id);
+    setEncryptionKey(key); // NEW — CryptoKey kept in memory, this tab only
   };
 
+
   const roomLink = generatedRoom
-    ? `${window.location.origin}/room/${generatedRoom}`
+    ? `${window.location.origin}/room/${generatedRoom}#key=${keyB64}`
     : '';
 
   const handleCopyLink = async () => {
@@ -135,6 +136,9 @@ export default function Home() {
                     <code className="flex-1 text-xs text-brand-300 bg-gray-900 rounded-lg px-3 py-2 break-all font-mono">
                       {roomLink}
                     </code>
+                    <p className="text-xs text-emerald-400 flex items-center gap-1 mt-1">
+                      🔒 End-to-end encrypted — decryption key is in the link, never sent to any server
+                    </p>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <button

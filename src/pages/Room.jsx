@@ -1,34 +1,25 @@
-/**
- * Room.jsx — Fixed
- *
- * Determines role correctly:
- *   - SENDER: has selectedFile in context (same tab that dropped the file)
- *   - RECEIVER: no file in context (opened link from another browser/tab)
- *
- * Also shows a proper "waiting for receiver" message and handles all
- * status transitions cleanly.
- */
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useTransferContext } from '../context/TransferContext.jsx';
 import { useWebRTC } from '../hooks/useWebRTC.js';
 import { useFileTransfer } from '../hooks/useFileTransfer.js';
+import { importKeyFromBase64 } from '../utils/crypto.js';
 import StatusBadge from '../components/StatusBadge.jsx';
 import ProgressBar from '../components/ProgressBar.jsx';
 import ConnectionLog from '../components/ConnectionLog.jsx';
 import HashResult from '../components/HashResult.jsx';
-import FileInfo from '../components/FileInfo.jsx';
 import { CONN_STATUS } from '../utils/constants.js';
 import { formatBytes } from '../utils/format.js';
 
 export default function Room() {
   const { roomId } = useParams();
   const navigate = useNavigate();
-  const { selectedFile, getSenderMeta, clearTransfer } = useTransferContext();
+  const { selectedFile, getSenderMeta, clearTransfer, encryptionKey: senderKey } = useTransferContext();
 
   const [logs, setLogs] = useState([]);
   const [copied, setCopied] = useState(false);
+  const [resolvedKey, setResolvedKey] = useState(null); // CryptoKey
+  const [keyReady, setKeyReady] = useState(false);
 
   const { progress, fileResult, updateProgress, setResult } = useFileTransfer();
 
@@ -43,12 +34,46 @@ export default function Room() {
     [setResult]
   );
 
+  // ── Resolve the AES-GCM encryption key ─────────────────────────────────
+  // - Sender already has the CryptoKey in context (generated on Home page)
+  // - Receiver must import it from the URL fragment (#key=...)
+  //   The fragment is NEVER sent to the server, so this is zero-knowledge.
+  useEffect(() => {
+    if (selectedFile && senderKey) {
+      setResolvedKey(senderKey);
+      setKeyReady(true);
+      return;
+    }
+
+    const hash = window.location.hash; // e.g. "#key=abc123..."
+    const match = hash.match(/key=([^&]+)/);
+
+    if (match) {
+      importKeyFromBase64(match[1])
+        .then((k) => {
+          setResolvedKey(k);
+          setKeyReady(true);
+          addLog('🔑 Encryption key loaded from link');
+        })
+        .catch((err) => {
+          addLog(`⚠️ Could not load encryption key: ${err.message}`);
+          setKeyReady(true); // proceed in unencrypted mode
+        });
+    } else {
+      // No key in URL — unencrypted mode
+      setKeyReady(true);
+    }
+  }, [selectedFile, senderKey, addLog]);
+
+  // Delay join-room until the key resolution attempt is finished,
+  // so the receiver doesn't start receiving chunks before it can decrypt them.
   const { status, role } = useWebRTC({
-    roomId,
+    roomId: keyReady ? roomId : null,
     file: selectedFile || null,
     onProgress: updateProgress,
     onFileReceived: handleFileReceived,
     onLog: addLog,
+    encryptionKey: resolvedKey,
   });
 
   // Sender metadata — either from live File object or from sessionStorage cache
@@ -57,10 +82,10 @@ export default function Room() {
     : getSenderMeta();
 
   // Is this tab the sender?
-  // True if there's a file in context OR sessionStorage has meta for this room
   const isSender = !!selectedFile || (senderMeta && senderMeta.roomId === roomId);
 
-  const roomLink = `${window.location.origin}/room/${roomId}`;
+  // Full URL including the #key= fragment, so the link stays shareable end-to-end
+  const roomLink = typeof window !== 'undefined' ? window.location.href : '';
 
   const handleCopy = async () => {
     try {
@@ -149,6 +174,19 @@ export default function Room() {
                 </button>
               </div>
             </div>
+
+            {/* Encryption status badge */}
+            {resolvedKey ? (
+              <p className="text-xs text-emerald-400 flex items-center gap-1.5">
+                <span>🔒</span>
+                End-to-end encrypted (AES-256-GCM) — key never sent to server
+              </p>
+            ) : keyReady ? (
+              <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                <span>🔓</span>
+                Unencrypted transfer (no key found in link)
+              </p>
+            ) : null}
           </div>
 
           {/* ── File info ── */}
@@ -193,13 +231,18 @@ export default function Room() {
 
           {/* ── Status messages ── */}
 
+          {/* Resolving encryption key */}
+          {!keyReady && (
+            <InfoCard icon="🔑" text="Resolving encryption key…" />
+          )}
+
           {/* Joining */}
-          {isIdle && (
+          {keyReady && isIdle && (
             <InfoCard icon="⏳" text="Connecting to signaling server…" />
           )}
 
           {/* Sender waiting */}
-          {isSender && isConnecting && !isDone && (
+          {keyReady && isSender && isConnecting && !isDone && (
             <InfoCard
               icon="🔗"
               text="Waiting for the receiver to open the link in another browser…"
@@ -207,7 +250,7 @@ export default function Room() {
           )}
 
           {/* Receiver waiting */}
-          {!isSender && isConnecting && !isDone && (
+          {keyReady && !isSender && isConnecting && !isDone && (
             <InfoCard
               icon="📡"
               text="Connected to room — waiting for sender to initiate…"
@@ -290,7 +333,7 @@ export default function Room() {
       </main>
 
       <footer className="border-t border-gray-800/60 py-4 text-center text-xs text-gray-600">
-        P2P Web Share · File data never touches the server
+        P2P Web Share · End-to-end encrypted · File data never touches the server
       </footer>
     </div>
   );

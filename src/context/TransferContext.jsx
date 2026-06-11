@@ -1,14 +1,3 @@
-/**
- * TransferContext.jsx
- *
- * Stores the selected File object in React context AND keeps file metadata
- * (name, size, type) in sessionStorage so the Room page can detect it is
- * the sender even after an in-tab navigation.
- *
- * NOTE: File objects cannot cross tabs or survive a hard reload.
- * That is intentional — only the tab that selected the file is the sender.
- */
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const TransferContext = createContext(null);
@@ -18,6 +7,7 @@ const SESSION_KEY = 'p2p_sender_meta';
 export function TransferProvider({ children }) {
   const [selectedFile, setSelectedFileState] = useState(null);
   const [roomId, setRoomId] = useState(null);
+  const [encryptionKey, setEncryptionKey] = useState(null);
 
   // On mount, try to restore roomId from sessionStorage
   // (file itself cannot be restored — only metadata for display)
@@ -55,6 +45,7 @@ export function TransferProvider({ children }) {
   const clearTransfer = () => {
     setSelectedFileState(null);
     setRoomId(null);
+    setEncryptionKey(null);
     sessionStorage.removeItem(SESSION_KEY);
   };
 
@@ -79,6 +70,8 @@ export function TransferProvider({ children }) {
         setSelectedFile,
         roomId,
         setRoomId: setSenderRoom,
+        encryptionKey, 
+        setEncryptionKey,
         clearTransfer,
         getSenderMeta,
       }}

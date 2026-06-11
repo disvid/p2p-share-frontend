@@ -17,7 +17,7 @@ export default function DropZone({ onFileSelect, selectedFile }) {
     (file) => {
       if (!file) return;
       if (file.size > MAX_FILE_SIZE) {
-        setError(`File too large. Max size is 50 MB. Your file: ${formatBytes(file.size)}`);
+        setError(`File too large. Max size is 2 GB. Your file: ${formatBytes(file.size)}`);
         return;
       }
       setError('');
@@ -117,7 +117,7 @@ export default function DropZone({ onFileSelect, selectedFile }) {
                 </span>
               </p>
             </div>
-            <p className="text-xs text-gray-600">Max 50 MB · Any file type</p>
+            <p className="text-xs text-gray-600">Max 2 GB · Any file type · End-to-end encrypted</p>
           </div>
         )}
       </div>

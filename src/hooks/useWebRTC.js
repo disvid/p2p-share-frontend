@@ -24,7 +24,7 @@ import { socket, ensureConnected } from '../services/socket.js';
 import { createWebRTCSession } from '../services/webrtc.js';
 import { CONN_STATUS } from '../utils/constants.js';
 
-export function useWebRTC({ roomId, file, onProgress, onFileReceived, onLog }) {
+export function useWebRTC({ roomId, file, onProgress, onFileReceived, onLog, encryptionKey}) {
   const [status, setStatus]   = useState(CONN_STATUS.IDLE);
   const [role,   setRole]     = useState(null);
 
@@ -80,6 +80,7 @@ export function useWebRTC({ roomId, file, onProgress, onFileReceived, onLog }) {
         onProgress,
         onFileReceived,
         onLog: log,
+        encryptionKey,
         onChannelOpen: () => {
           log('DataChannel open!');
           // Only sender sends file, and only once
@@ -97,7 +98,7 @@ export function useWebRTC({ roomId, file, onProgress, onFileReceived, onLog }) {
       });
     }
     return sessionRef.current;
-  }, [updateStatus, onProgress, onFileReceived, log]);
+  }, [updateStatus, onProgress, onFileReceived, log, encryptionKey]);
 
   // ── Join the room ──────────────────────────────────────────────────────────
   const joinRoom = useCallback(() => {
